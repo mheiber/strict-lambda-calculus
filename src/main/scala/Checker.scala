@@ -21,9 +21,12 @@ object Checker:
 
   case class Unbound(expr: Syn, v: Var) extends TyError(expr, s"unbound var $v")
 
-  def synthesize(e: SynthTerm): Ty = synthesize(e, Map.empty)(using verbose = false)._1
-  def synthesizeVerbose(e: SynthTerm): Ty = synthesize(e, Map.empty)(using verbose = true)._1
-  def analyze(e: Syn, expected: Ty): Unit = analyze(e, expected, Map.empty, Map.empty)(using verbose = false)
+  private def synthesize(e: SynthTerm): Ty = synthesize(e, Map.empty)(using verbose = false)._1
+  private def synthesizeVerbose(e: SynthTerm): Ty = synthesize(e, Map.empty)(using verbose = true)._1
+  def analyze(e: Syn, expected: Ty): Unit =
+    val delta = analyze(e, expected, Map.empty, Map.empty)(using verbose = false)
+    if (delta.nonEmpty) throw Unbound(e, delta.head._1)
+
   def analyzeVerbose(e: Syn, expected: Ty): Unit = {
     debugIn("start analyzing")
     analyze(e, expected, Map.empty, Map.empty)(using verbose = true)

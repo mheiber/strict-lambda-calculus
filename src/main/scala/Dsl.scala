@@ -1,8 +1,8 @@
 package slc
-import Syntax._
-import Checker.{analyze, analyzeVerbose}
 
 object Dsl:
+  import Syntax.*
+  import Checker.{analyze, analyzeVerbose}
   // using one-letter param names to stop IntelliJ param name hints
   def let(u: StrictVar, t: AnalysisTerm)(e: Expr): LetStrict =
     LetStrict(u, t, e)
@@ -15,20 +15,11 @@ object Dsl:
 
   case class AnnoStdVar(x: StandardVar, ty: Ty)
 
-  implicit class Annotate(ty: Ty):
-    def ::(v: StandardVar): AnnoStdVar = AnnoStdVar(v, ty)
-  
-  implicit class ToArrowTy(returnTy: Ty):
-    def ->:(paramTy: Ty): ArrowTy = ArrowTy(paramTy, returnTy)
+  extension (v: StandardVar)  def ::(annoTy: Ty): AnnoStdVar = AnnoStdVar(v, annoTy)
+  extension (v: StandardVar) def ->:(expr: Expr): Lam = Lam(v, expr)
+  extension (x: StandardVar) def @@(arg: Var): Apply = Apply(x, arg)
 
-  implicit class ToLambda(expr: Expr):
-    def ->:(v: StandardVar): Lam = Lam(v, expr)
+  extension (returnTy: Ty) def ->:(paramTy: Ty): ArrowTy = ArrowTy(paramTy, returnTy)
 
-  implicit class toApply(x: StandardVar):
-    def @@(arg: Var): Apply = Apply(x, arg)
-
-  implicit class TypeCheck(e: Expr):
-    def check(ty: Ty): Unit = analyze(e, ty)
-    def checkVerbose(ty: Ty): Unit = analyzeVerbose(e, ty)
-
-
+  extension (e: Expr) def check(ty: Ty): Unit = analyze(e, ty)
+  extension (e: Expr) def checkVerbose(ty: Ty): Unit = analyzeVerbose(e, ty)

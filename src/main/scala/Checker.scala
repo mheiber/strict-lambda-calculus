@@ -1,50 +1,50 @@
 package slc
-import Syntax._
 
 object Checker:
+  import Syntax._
   type GammaT = Map[StandardVar, Ty]
   type DeltaT = Map[StrictVar, Ty]
 
-  class TyError(expr: Expr, message: String) extends Error(s"error at `$expr`: $message")
+  class TyError(syn: Syn, message: String) extends Error(s"error at `$syn`: $message")
 
-  case class InconsistentTypes(expr: Expr, v: StrictVar, t1: Ty, t2: Ty) extends TyError(
-    expr, s"var $v is used inconsistently: got types $t1 and $t2"
+  case class InconsistentTypes(syn: Syn, v: StrictVar, t1: Ty, t2: Ty) extends TyError(
+    syn, s"var $v is used inconsistently: got types $t1 and $t2"
   )
 
-  case class TypeMismatch(expr: Expr, got: Ty, expected: Ty) extends TyError(
-    expr, s"got $got, expected: $expected"
+  case class TypeMismatch(syn: Syn, got: Ty, expected: Ty) extends TyError(
+    syn, s"got $got, expected: $expected"
   )
 
-  case class ExpectedArrow(expr: Expr, got: Ty) extends TyError(
-    expr, s"got $got, expected: function type"
+  case class ExpectedArrow(syn: Syn, got: Ty) extends TyError(
+    syn, s"got $got, expected: function type"
   )
 
-  case class Unbound(expr: Expr, v: Var) extends TyError(expr, s"unbound var $v")
+  case class Unbound(expr: Syn, v: Var) extends TyError(expr, s"unbound var $v")
 
-  def synthesize(e: SynthTerm): Ty = synthesize(e, Map.empty)(false)._1
-  def synthesizeVerbose(e: SynthTerm): Ty = synthesize(e, Map.empty)(true)._1
-  def analyze(e: Expr, expected: Ty): Unit = analyze(e, expected, Map.empty, Map.empty)(false)
-  def analyzeVerbose(e: Expr, expected: Ty): Unit = {
+  def synthesize(e: SynthTerm): Ty = synthesize(e, Map.empty)(using verbose = false)._1
+  def synthesizeVerbose(e: SynthTerm): Ty = synthesize(e, Map.empty)(using verbose = true)._1
+  def analyze(e: Syn, expected: Ty): Unit = analyze(e, expected, Map.empty, Map.empty)(using verbose = false)
+  def analyzeVerbose(e: Syn, expected: Ty): Unit = {
     debugIn("start analyzing")
-    analyze(e, expected, Map.empty, Map.empty)(true)
+    analyze(e, expected, Map.empty, Map.empty)(using verbose = true)
     debugIn("end analyzing")
   }
 
-  private def unionDeltas(e: Expr, delta1: DeltaT, delta2: DeltaT): DeltaT =
-    validateDeltasConsistent(e, delta1, delta2)
+  private def unionDeltas(syn: Syn, delta1: DeltaT, delta2: DeltaT): DeltaT =
+    validateDeltasConsistent(syn, delta1, delta2)
     delta1 ++ delta2
 
-  private def validateDeltasConsistent(e: Expr, delta1: DeltaT, delta2: DeltaT): Unit =
+  private def validateDeltasConsistent(syn: Syn, delta1: DeltaT, delta2: DeltaT): Unit =
     for (strictVar <- delta1.keySet.intersect(delta2.keySet)) {
-      val t1 = lookup(e, delta1, strictVar)
-      val t2 = lookup(e, delta2, strictVar)
-      if (t1 != t2) throw InconsistentTypes(e, strictVar, t1, t2)
+      val t1 = lookup(syn, delta1, strictVar)
+      val t2 = lookup(syn, delta2, strictVar)
+      if (t1 != t2) throw InconsistentTypes(syn, strictVar, t1, t2)
     }
 
-  private def lookup[V <: Var](expr: Expr, m: Map[V, Ty], v: V): Ty =
-    m.getOrElse(v, throw Unbound(expr, v))
+  private def lookup[V <: Var](syn: Syn, m: Map[V, Ty], v: V): Ty =
+    m.getOrElse(v, throw Unbound(syn, v))
 
-  private def synthesize(e: SynthTerm, gamma: GammaT)(implicit verbose: Boolean = false): (Ty, DeltaT) =
+  private def synthesize(e: SynthTerm, gamma: GammaT)(using verbose: Boolean = false): (Ty, DeltaT) =
     if (verbose) debugIn(s"begin synthesize `$e`. gamma = $gamma")
     val res: (Ty, DeltaT) = e match {
       // SVar
@@ -75,7 +75,7 @@ object Checker:
     res
   end synthesize
 
-  private def analyze(e: Expr, tau: Ty, gamma: GammaT, delta: DeltaT)(implicit verbose: Boolean = false): DeltaT =
+  private def analyze(e: Syn, tau: Ty, gamma: GammaT, delta: DeltaT)(using verbose: Boolean = false): DeltaT =
     if (verbose) debugIn(s"begin analyze `$e` against `$tau`. gamma = $gamma. deltaIn = $delta")
     val res = e match {
       // SVarS

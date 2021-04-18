@@ -15,11 +15,14 @@ object Dsl:
 
   case class AnnoStdVar(x: StandardVar, ty: Ty)
 
-  extension (v: StandardVar)  def ::(annoTy: Ty): AnnoStdVar = AnnoStdVar(v, annoTy)
+  extension (v: StandardVar) def ::(annoTy: Ty): AnnoStdVar = AnnoStdVar(v, annoTy)
   extension (v: StandardVar) def ->:(expr: Expr): Lam = Lam(v, expr)
   extension (x: StandardVar) def @@(arg: Var): Apply = Apply(x, arg)
 
-  extension (returnTy: Ty) def ->:(paramTy: Ty): ArrowTy = ArrowTy(paramTy, returnTy)
+  extension (paramTy: Ty) def ->:(returnTy: Ty): ArrowTy = {
+    println(s"receiver $paramTy and arg $returnTy")
+    ArrowTy(paramTy, returnTy)
+  }
 
   extension (e: Expr) def check(ty: Ty): Unit = analyze(e, ty)
   extension (e: Expr) def checkVerbose(ty: Ty): Unit = analyzeVerbose(e, ty)

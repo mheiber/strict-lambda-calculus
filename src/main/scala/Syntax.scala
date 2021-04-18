@@ -11,7 +11,7 @@ object Syntax:
 
   // this corresponds to type 1 in the paper
   case object T extends Ty
-  // The technical presentation in the paper does not have any ground terms,
+  // The technical presentation in the paper does not have any ground terms
   case object *
 
   case class ArrowTy(paramTy: Ty, retTy: Ty) extends Ty:
@@ -23,7 +23,7 @@ object Syntax:
   case class StrictVar(name: String):
     override def toString = name
 
-  case class Apply(f: StandardVar, arg: Var):
+  case class Apply(f: StandardVar, arg: Var | *.type):
     override def toString = s"($f @@ $arg)"
 
   case class Lam(stdVar: StandardVar, s: Expr):

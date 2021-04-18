@@ -4,7 +4,6 @@ import slc.Syntax._
 import slc.Dsl._
 
 class SlcSpec:
-  @Test def test(): Unit =
     // there is a *syntactic* distinction
     // between standard vars and strict vars
     val x = StandardVar("x")
@@ -18,7 +17,6 @@ class SlcSpec:
     val x6 = StandardVar("x6")
     val x7 = StandardVar("x7")
 
-
     val u = StrictVar("u")
     val v = StrictVar("v")
     val w = StrictVar("w")
@@ -29,75 +27,91 @@ class SlcSpec:
     // and a ground term of that type
     assert(* == *)
 
-
-    object DslCheatSheet:
+    @Test def dslCheetSheet(): Unit =
       // WARNING: the syntax is really restrictive, just like in the paper.
       // See the type definitions in Syntax.scala or section 5.1
 
       // function abstraction. The variable must be a StandardVar
-      assert(x ->: y == Lam(x, *))
+      assertEquals(x ->: *, Lam(x, *))
       // the following are not valid syntax, because a lambda is from standardVar to expr
       // (x ->: y) ->: z
       // x ->: (y ->: z)
       // u ->: u
       // function application. Restricted to `StandardVar @@ Var`
-      assert(x @@ y == Apply(x, y))
+      assertEquals(x @@ y, Apply(x, y))
       // Just as in the paper, there are 3 kinds of `let`
       val T_s: SynthTerm = *
       val T_a: AnalysisTerm = *
       val S: Expr = *
-      assert(
+      assertEquals(
         // paper: `x = T_s; S`
-        let(x, T_s){S} == LetStd(x, T_s, S)
+        let(x, T_s) {
+          S
+        }, LetStd(x, T_s, S)
       )
-      assert(
+      assertEquals(
         // paper: `x : tau = T_a; S`
-        let(x :: T, T_a){S} == LetAnno(x, T, T_a, S)
+        let(x :: T, T_a) {
+          S
+        }, LetAnno(x, T, T_a, S)
       )
       // notice that the ->: in arrow types is right-associative
-      assert(
+      assertEquals(
         // paper: `x : 1 -> 1 -> 1 = *; *`
-        let(x :: T ->: T ->: T, *){*} == LetAnno(x, ArrowTy(T, ArrowTy(T, T)), *, *)
+        let(x :: T ->: (T ->: T), *) {
+          *
+        }, LetAnno(x, ArrowTy(T, ArrowTy(T, T)), *, *)
       )
-      assert(
+      assertEquals(
         // paper: `u = T_a; S`
-        let(u, T_a){S} == LetStrict(u, T_a, S)
+        let(u, T_a) {
+          S
+        }, LetStrict(u, T_a, S)
       )
-    end DslCheatSheet
 
-    // example from paper
-    let(u, x ->: *){u}
-      . check(T ->: T)
+    @Test def examples(): Unit =
+      // example from paper
+      let(u, x ->: *) {
+        u
+      }
+        .check(T ->: T)
 
-    // lets with annotations
-    let(x :: T ->: T, z ->: z) {
-      let(y :: T, *) {
-        let(x1, x @@ y) {
-          x1
+      // lets with annotations
+      let(x :: T ->: T, z ->: z) {
+        let(y :: T, *) {
+          let(x1, x @@ y) {
+            x1
+          }
         }
       }
-    }
-      . check(T)
+        .check(T)
 
-    let(x :: T ->: T, x1 ->: x1){
-      let(y :: T ->: (T ->: T), x2 ->: x) {
-        y
+      // `u` can be used without ever having been defined.
+      // The important rule here is SVarS
+      let(x :: T ->: T, x1 ->: x1) {
+          let(x2, x @@ u) {
+            u
+          }
+        }
+        .check(T)
+
+      let(x :: T ->: T, y ->: y) {
+        let(z, x @@ u) {
+          z
+        }
+      }.check(T)
+      // x: 1 -> 1 = lambda y. y; z = x(u); z
+
+      // even smaller weird example
+      (u).check(T ->: T)
+
+      // The type system ensures that strict vars are used consistently
+      let(x :: T ->: T, x1 ->: x1) {
+        let(x2, x @@ u) {
+            u
+        }
       }
-//        let(x3 :: T, *){
-//          let(x3, x @@ u){
-//            x3// let(x3, z){x3}
-//          }
-//        }
-//      }
-    }.checkVerbose(T ->: T ->: T)
-
-//    let(x :: Bty ~> Bty, u)(u).checkVerbose(Bty ~> Bty)
-
-    // All and only valid SLC syntax is representable,
-    // so scalac won't type-check the following
-    // let(x, let(u, x ~> b)(u))(X)
-
-//    let(x, x)(x).check(Bty)
+        .checkVerbose(T ->: T ->: T)
 
 
 
